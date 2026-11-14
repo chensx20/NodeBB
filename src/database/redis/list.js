@@ -26,7 +26,8 @@ module.exports = function (module) {
 		if (!key) {
 			return;
 		}
-		await module.client.lrem(key, 0, value);
+		value = Array.isArray(value) ? value : [value];
+		await Promise.all(value.map(item => module.client.lrem(key, 0, item)));
 	};
 
 	module.listTrim = async function (key, start, stop) {

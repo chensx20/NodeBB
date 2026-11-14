@@ -95,11 +95,16 @@ RETURNING A."array"[array_length(A."array", 1)] v`,
 			return;
 		}
 
+		value = Array.isArray(value) ? value : [value];
 		await module.pool.query({
 			name: 'listRemoveAll',
 			text: `
 UPDATE "legacy_list" l
-   SET "array" = array_remove(l."array", $2::TEXT)
+   SET "array" = ARRAY(SELECT entry.value
+                         FROM UNNEST(l."array") WITH ORDINALITY AS entry(value, ordinal)
+                        WHERE NOT EXISTS (SELECT 1 FROM UNNEST($2::TEXT[]) AS removed(value)
+                                           WHERE entry.value IS NOT DISTINCT FROM removed.value)
+                        ORDER BY entry.ordinal)
   FROM "legacy_object_live" o
  WHERE o."_key" = l."_key"
    AND o."type" = l."type"
