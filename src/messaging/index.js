@@ -413,10 +413,11 @@ async function checkChatPreferences(uid, toUid) {
 		user.isFollowing(toUid, uid),
 	]);
 	const sender = Number(uid);
-	const restricted = settings.chatDenyList.includes(sender) ||
+	const denied = settings.chatDenyList.includes(sender);
+	const restricted =
 		(settings.chatAllowList.length > 0 && !settings.chatAllowList.includes(sender)) ||
 		(!settings.chatAllowList.length && !settings.chatDenyList.length && settings.restrictChat && !isFollowing);
-	if (settings.disableIncomingChats || (!isStaff && restricted)) {
+	if (settings.disableIncomingChats || denied || (!isStaff && restricted)) {
 		throw new Error('[[error:chat-restricted]]');
 	}
 }

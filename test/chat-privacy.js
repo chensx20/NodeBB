@@ -106,11 +106,14 @@ describe('Chat privacy', () => {
 	});
 
 	for (const role of ['administrator', 'global moderator']) {
-		it(`allows ${role} to bypass both lists, but never disabled incoming chats`, async () => {
+		it(`allows ${role} to bypass allow and legacy restrictions, but not deny or disabled chats`, async () => {
 			const uid = role === 'administrator' ? admin : globalMod;
-			await save({ restrictChat: 1, chatAllowList: [other], chatDenyList: [uid] });
+			await save({ restrictChat: 1, chatAllowList: [other] });
 			await messaging.canMessageUser(uid, recipient);
 			await messaging.canMessageRoom(uid, roomId);
+			await save({ chatDenyList: [uid] });
+			await assert.rejects(messaging.canMessageUser(uid, recipient), restricted);
+			await assert.rejects(messaging.canMessageRoom(uid, roomId), restricted);
 			await save({ disableIncomingChats: 1 });
 			await assert.rejects(messaging.canMessageUser(uid, recipient), restricted);
 			await assert.rejects(messaging.canMessageRoom(uid, roomId), restricted);
