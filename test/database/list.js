@@ -182,6 +182,40 @@ describe('List methods', () => {
 			});
 		});
 
+		it('should remove all matching elements for an array of values', async () => {
+			await db.listAppend('arrayListRemoveAll', ['b', 'a', 'd', 'b', 'c', 'd', 'a']);
+			await db.listRemoveAll('arrayListRemoveAll', ['b', 'd', 'missing']);
+			assert.deepStrictEqual(await db.getListRange('arrayListRemoveAll', 0, -1), ['a', 'c', 'a']);
+		});
+
+		it('should preserve the list when requested values are absent', async () => {
+			await db.listAppend('absentListRemoveAll', ['a', 'b', 'a']);
+			await db.listRemoveAll('absentListRemoveAll', ['missing', 'missing']);
+			await db.listRemoveAll('absentListRemoveAll', 'missing');
+			assert.deepStrictEqual(await db.getListRange('absentListRemoveAll', 0, -1), ['a', 'b', 'a']);
+		});
+
+		it('should support array removal with a callback', (done) => {
+			db.listAppend('callbackListRemoveAll', ['1', '2', '1'], (err) => {
+				assert.ifError(err);
+				db.listRemoveAll('callbackListRemoveAll', [1, 1], function (err) {
+					assert.ifError(err);
+					assert.equal(arguments.length, 1);
+					db.getListRange('callbackListRemoveAll', 0, -1, (err, list) => {
+						assert.ifError(err);
+						assert.deepStrictEqual(list, ['2']);
+						done();
+					});
+				});
+			});
+		});
+
+		it('should leave the list unchanged for an empty array', async () => {
+			await db.listAppend('emptyArrayListRemoveAll', ['a', 'b']);
+			await db.listRemoveAll('emptyArrayListRemoveAll', []);
+			assert.deepStrictEqual(await db.getListRange('emptyArrayListRemoveAll', 0, -1), ['a', 'b']);
+		});
+
 		it('should not remove anyhing if key is falsy', (done) => {
 			db.listRemoveAll(null, 3, (err) => {
 				assert.ifError(err);
