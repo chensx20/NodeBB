@@ -198,6 +198,19 @@ uploadsController.uploadFile = async function (req, res, next) {
 	}
 
 	try {
+		const targetFolder = path.join(nconf.get('upload_path'), params.folder);
+		let stats;
+		try {
+			stats = await fs.promises.stat(targetFolder);
+		} catch (err) {
+			if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
+				throw new Error('[[error:invalid-path]]');
+			}
+			throw err;
+		}
+		if (!stats.isDirectory()) {
+			throw new Error('[[error:invalid-path]]');
+		}
 		const data = await file.saveFileToLocal(uploadedFile.name, params.folder, uploadedFile.path);
 		res.json([{ url: data.url }]);
 	} catch (err) {
