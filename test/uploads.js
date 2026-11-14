@@ -419,6 +419,27 @@ describe('Upload Controllers', () => {
 			assert.strictEqual(file.existsSync(path.join(folderPath, 'test.png')), false);
 		});
 
+		it('should fail to upload regular file to a file path', async () => {
+			const folder = 'upload-target-file';
+			const filePath = path.join(nconf.get('upload_path'), folder);
+			const fileContent = 'existing upload target';
+			await fs.writeFile(filePath, fileContent);
+
+			try {
+				const { response, body } = await helpers.uploadFile(`${nconf.get('url')}/api/admin/upload/file`, path.join(__dirname, '../test/files/test.png'), {
+					params: JSON.stringify({
+						folder: folder,
+					}),
+				}, jar, csrf_token);
+
+				assert.strictEqual(response.statusCode, 500);
+				assert.strictEqual(body.error, '[[error:invalid-path]]');
+				assert.strictEqual(await fs.readFile(filePath, 'utf8'), fileContent);
+			} finally {
+				await fs.unlink(filePath);
+			}
+		});
+
 		it('should fail to upload regular file in wrong directory', async () => {
 			const { response, body } = await helpers.uploadFile(`${nconf.get('url')}/api/admin/upload/file`, path.join(__dirname, '../test/files/test.png'), {
 				params: JSON.stringify({
