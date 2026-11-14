@@ -1,4 +1,10 @@
 {
+    "chat-privacy": "Chat privacy",
+    "disable-incoming-chats": "Disable all incoming private chats, including from staff",
+    "chat-allow-list": "Allow list (user IDs)",
+    "chat-deny-list": "Deny list (user IDs)",
+    "chat-list-format": "Enter user IDs separated by commas. Leave blank for an empty list.",
+    "chat-lists-help": "Deny takes precedence over allow. Administrators and global moderators bypass both lists. With both lists empty, the follow-only setting above still applies. These preferences also apply to existing private chats.",
     "user-menu": "Felhasználói menü",
     "banned": "Kitiltva",
     "unbanned": "Unbanned",
