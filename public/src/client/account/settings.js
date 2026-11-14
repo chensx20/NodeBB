@@ -16,9 +16,19 @@ define('forum/account/settings', [
 		}
 	});
 
-	AccountSettings.init = function () {
+	AccountSettings.init = async function () {
 		savedSkin = $('#bootswatchSkin').length && $('#bootswatchSkin').val();
 		header.init();
+		const restrictChat = $('[data-property="restrictChat"]');
+		if (restrictChat.length) {
+			const settings = ajaxify.data.settings;
+			const html = await app.parseAndTranslate('partials/account/chat-settings', {
+				disableIncomingChats: settings.disableIncomingChats,
+				chatAllowList: settings.chatAllowList.join(', '),
+				chatDenyList: settings.chatDenyList.join(', '),
+			});
+			restrictChat.parent().after(html);
+		}
 
 		$('#submitBtn').on('click', function () {
 			const settings = loadSettings();
@@ -53,6 +63,11 @@ define('forum/account/settings', [
 		$('.account').find('input, textarea, select').each(function (id, input) {
 			input = $(input);
 			const setting = input.attr('data-property');
+			if (setting === 'chatAllowList' || setting === 'chatDenyList') {
+				const value = input.val().trim();
+				settings[setting] = value ? value.split(',').map(id => Number(id.trim())) : [];
+				return;
+			}
 			if (input.is('select')) {
 				settings[setting] = input.val();
 				return;
@@ -90,7 +105,7 @@ define('forum/account/settings', [
 			if (languageChanged && parseInt(app.user.uid, 10) === parseInt(ajaxify.data.theirid, 10)) {
 				window.location.reload();
 			}
-		});
+		}).catch(alerts.error);
 	}
 
 	function toggleCustomRoute() {

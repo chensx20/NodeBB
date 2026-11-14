@@ -33,7 +33,24 @@ Settings:
       description: Automatically be notified of new posts in a topic, when you reply to that topic
     restrictChat:
       type: boolean
-      description: Do not allow other users to start chats with you (or add you to other chat rooms)
+      description: Only allow private chats from followed users when both chat lists are empty; staff are exempt
+    disableIncomingChats:
+      type: boolean
+      description: Reject incoming private chats from everyone, including administrators and global moderators
+    chatAllowList:
+      type: array
+      uniqueItems: true
+      items:
+        type: integer
+        minimum: 1
+      description: When non-empty, only listed users and staff may send private chats; deny takes precedence for non-staff
+    chatDenyList:
+      type: array
+      uniqueItems: true
+      items:
+        type: integer
+        minimum: 1
+      description: Users prevented from sending private chats, except administrators and global moderators
     topicSearchEnabled:
       type: boolean
       description: Enable keyword searching within topics
@@ -140,6 +157,9 @@ Settings:
     - followTopicsOnCreate
     - followTopicsOnReply
     - restrictChat
+    - disableIncomingChats
+    - chatAllowList
+    - chatDenyList
     - topicSearchEnabled
     - categoryTopicSort
     - userLang

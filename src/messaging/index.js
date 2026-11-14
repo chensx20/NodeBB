@@ -358,20 +358,12 @@ Messaging.canMessageUser = async (uid, toUid) => {
 		throw new Error('[[error:no-privileges]]');
 	}
 
-	const [settings, isAdmin, isModerator, isFollowing, isBlocked] = await Promise.all([
-		user.getSettings(toUid),
-		user.isAdministrator(uid),
-		user.isModeratorOfAnyCategory(uid),
-		user.isFollowing(toUid, uid),
-		user.blocks.is(uid, toUid),
-	]);
+	const isBlocked = await user.blocks.is(uid, toUid);
 
 	if (isBlocked) {
 		throw new Error('[[error:chat-user-blocked]]');
 	}
-	if (settings.restrictChat && !isAdmin && !isModerator && !isFollowing) {
-		throw new Error('[[error:chat-restricted]]');
-	}
+	await checkChatPreferences(uid, toUid);
 
 	await plugins.hooks.fire('static:messaging.canMessageUser', {
 		uid: uid,
@@ -402,12 +394,32 @@ Messaging.canMessageRoom = async (uid, roomId) => {
 	if (!canChat.includes(true)) {
 		throw new Error('[[error:no-privileges]]');
 	}
+	if (!roomData.public) {
+		const uids = await db.getSortedSetRange(`chat:room:${roomId}:uids`, 0, -1);
+		await Promise.all(uids.filter(toUid => Number(toUid) !== Number(uid))
+			.map(toUid => checkChatPreferences(uid, toUid)));
+	}
 
 	await plugins.hooks.fire('static:messaging.canMessageRoom', {
 		uid: uid,
 		roomId: roomId,
 	});
 };
+
+async function checkChatPreferences(uid, toUid) {
+	const [settings, isStaff, isFollowing] = await Promise.all([
+		user.getSettings(toUid),
+		user.isAdminOrGlobalMod(uid),
+		user.isFollowing(toUid, uid),
+	]);
+	const sender = Number(uid);
+	const restricted = settings.chatDenyList.includes(sender) ||
+		(settings.chatAllowList.length > 0 && !settings.chatAllowList.includes(sender)) ||
+		(!settings.chatAllowList.length && !settings.chatDenyList.length && settings.restrictChat && !isFollowing);
+	if (settings.disableIncomingChats || (!isStaff && restricted)) {
+		throw new Error('[[error:chat-restricted]]');
+	}
+}
 
 async function checkReputation(uid) {
 	if (meta.config['reputation:disabled']) {

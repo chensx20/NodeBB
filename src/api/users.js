@@ -140,6 +140,11 @@ usersAPI.updateSettings = async function (caller, data) {
 	// load raw settings without parsing values to booleans
 	const current = await db.getObject(`user:${data.uid}:settings`);
 	const payload = { ...defaults, ...current, ...data.settings };
+	for (const field of ['chatAllowList', 'chatDenyList']) {
+		if (!Object.prototype.hasOwnProperty.call(data.settings, field)) {
+			payload[field] = JSON.parse((current && current[field]) || '[]');
+		}
+	}
 	delete payload.uid;
 
 	return await user.saveSettings(data.uid, payload);

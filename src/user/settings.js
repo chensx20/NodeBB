@@ -77,6 +77,9 @@ module.exports = function (User) {
 		settings.followTopicsOnReply = parseInt(getSetting(settings, 'followTopicsOnReply', 0), 10) === 1;
 		settings.upvoteNotifFreq = getSetting(settings, 'upvoteNotifFreq', 'all');
 		settings.restrictChat = parseInt(getSetting(settings, 'restrictChat', 0), 10) === 1;
+		settings.disableIncomingChats = parseInt(settings.disableIncomingChats || 0, 10) === 1;
+		settings.chatAllowList = JSON.parse(settings.chatAllowList || '[]');
+		settings.chatDenyList = JSON.parse(settings.chatDenyList || '[]');
 		settings.topicSearchEnabled = parseInt(getSetting(settings, 'topicSearchEnabled', 0), 10) === 1;
 		settings.updateUrlWithPostIndex = parseInt(getSetting(settings, 'updateUrlWithPostIndex', 1), 10) === 1;
 		settings.bootswatchSkin = validator.escape(String(settings.bootswatchSkin || ''));
@@ -104,6 +107,23 @@ module.exports = function (User) {
 	}
 
 	User.saveSettings = async function (uid, data) {
+		await Promise.all(['chatAllowList', 'chatDenyList'].map(async (field) => {
+			if (data[field] === undefined) {
+				data[field] = [];
+			}
+			if (!Array.isArray(data[field]) ||
+				data[field].some(id => !Number.isSafeInteger(id) || id <= 0 || id === Number(uid))) {
+				throw new Error('[[error:invalid-data]]');
+			}
+			data[field] = [...new Set(data[field])];
+			const exists = await User.exists(data[field]);
+			if (!exists.every(Boolean)) {
+				throw new Error('[[error:no-user]]');
+			}
+		}));
+		if (data.disableIncomingChats !== undefined && ![true, false, 0, 1, '0', '1'].includes(data.disableIncomingChats)) {
+			throw new Error('[[error:invalid-data]]');
+		}
 		const maxPostsPerPage = meta.config.maxPostsPerPage || 20;
 		if (
 			!data.postsPerPage ||
@@ -146,6 +166,9 @@ module.exports = function (User) {
 			followTopicsOnCreate: data.followTopicsOnCreate,
 			followTopicsOnReply: data.followTopicsOnReply,
 			restrictChat: data.restrictChat,
+			disableIncomingChats: Number(data.disableIncomingChats || 0),
+			chatAllowList: JSON.stringify(data.chatAllowList),
+			chatDenyList: JSON.stringify(data.chatDenyList),
 			topicSearchEnabled: data.topicSearchEnabled,
 			updateUrlWithPostIndex: data.updateUrlWithPostIndex,
 			homePageRoute: ((data.homePageRoute === 'custom' ? data.homePageCustom : data.homePageRoute) || '').replace(/^\//, ''),
