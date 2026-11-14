@@ -198,6 +198,10 @@ uploadsController.uploadFile = async function (req, res, next) {
 	}
 
 	try {
+		const exists = await file.exists(path.join(nconf.get('upload_path'), params.folder));
+		if (!exists) {
+			throw new Error('[[error:invalid-path]]');
+		}
 		const data = await file.saveFileToLocal(uploadedFile.name, params.folder, uploadedFile.path);
 		res.json([{ url: data.url }]);
 	} catch (err) {
